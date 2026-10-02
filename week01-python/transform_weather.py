@@ -42,4 +42,5 @@ print(daily)
 
 # 5. Save clean data
 df.to_csv("data/clean_weather.csv", index=False)
+df.to_parquet("data/clean_weather.parquet", index=False)
 print("\nSaved to data/clean_weather.csv")
