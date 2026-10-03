@@ -3,8 +3,8 @@ import requests
 
 URL = "https://api.open-meteo.com/v1/forecast"
 params = {
-    "latitude": 14.60,
-    "longitude": 120.98,
+    "latitude": 15.25,
+    "longitude": 120.57,
     "hourly": "temperature_2m,relative_humidity_2m,precipitation",
     "timezone": "Asia/Manila",
 }
