@@ -2,7 +2,7 @@ import json
 import pandas as pd
 
 # 1. Load raw data
-with open("data/raw_weather.json") as f:
+with open("data/raw_weather_mabalacat.json") as f:
     raw = json.load(f)
 
 df = pd.DataFrame(raw["hourly"])
