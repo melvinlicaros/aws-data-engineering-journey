@@ -1,3 +1,4 @@
+from datetime import date
 import os
 from dotenv import load_dotenv
 import snowflake.connector
@@ -20,9 +21,10 @@ conn = snowflake.connector.connect(
 cur = conn.cursor()
 
 # 1. I-upload ang bawat file sa stage
+today = date.today().isoformat()
 for path in FILES:
     full_path = os.path.abspath(path)
-    cur.execute(f"PUT file://{full_path} @WEATHER_STAGE AUTO_COMPRESS=FALSE OVERWRITE=TRUE")
+    cur.execute(f"PUT file://{full_path} @WEATHER_STAGE/{today}/ AUTO_COMPRESS=FALSE")
     print("Uploaded:", path)
 
 # 2. I-load mula stage papunta sa table
@@ -31,8 +33,9 @@ cur.execute("""
     FROM (
     SELECT $1, METADATA$FILENAME
     FROM @WEATHER_STAGE
-);
+)
 """)
+
 for row in cur.fetchall():
     print(row)
 
