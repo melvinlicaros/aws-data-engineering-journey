@@ -18,6 +18,8 @@ FROM WEATHER_RAW r,
 LATERAL FLATTEN(input => r.raw_data:hourly:time) f
 LIMIT 10;
 
+
+
 SELECT raw_data FROM WEATHER_RAW;
 
 
