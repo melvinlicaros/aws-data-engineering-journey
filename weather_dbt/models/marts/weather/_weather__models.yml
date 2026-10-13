@@ -2,7 +2,7 @@ version: 2
 
 models:
   - name: weather_hourly
-    description: "Pinakabagong forecast kada lugar at oras"
+    description: "One row per location per hour, keeping only the latest forecast. Use for current forecast reporting and dashboards."
     columns:
       - name: observed_at
         data_tests:
@@ -22,3 +22,5 @@ models:
       - name: precipitation_mm
         data_tests:
           - not_null
+  - name: weather_hourly_history
+    description: "One row per location per hour per load, all loads kept. Use to compare how the forecast changed over time."

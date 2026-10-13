@@ -2,7 +2,9 @@ version: 2
 
 sources:
   - name: weather
+    description: "Hourly weather forecasts from the Open-Meteo API for Mabalacat and Manila, loaded by load_weather.py."
     database: WEATHER_DB
     schema: RAW
     tables:
       - name: weather_raw
+        description: "One row per JSON file loaded. raw_data holds the full API response as VARIANT; file_name and loaded_at track where and when each row came from."

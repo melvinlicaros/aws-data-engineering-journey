@@ -2,6 +2,7 @@ with source as (
 
     select * from {{ source('weather', 'weather_raw') }}
 
+
 ),
 
 flattened as (
