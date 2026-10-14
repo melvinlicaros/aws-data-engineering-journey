@@ -10,6 +10,10 @@ flattened as (
     select
         r.file_name,
         r.loaded_at,
+        case
+        when r.file_name ilike '%%manila%' then 'Manila'
+        when r.file_name ilike '%mabalacat%' then 'Mabalacat'
+        end AS location_name,
         r.raw_data:latitude::FLOAT AS latitude,
         r.raw_data:longitude::FLOAT AS longitude,
         f.value::TIMESTAMP_NTZ AS observed_at,

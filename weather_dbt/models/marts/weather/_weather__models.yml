@@ -24,3 +24,10 @@ models:
           - not_null
   - name: weather_hourly_history
     description: "One row per location per hour per load, all loads kept. Use to compare how the forecast changed over time."
+  - name: dim_location
+    description: "One row per location. Name, province, and region from the locations seed, plus coordinates from the weather data."
+    columns:
+      - name: location_id
+        data_tests:
+          - unique
+          - not_null
