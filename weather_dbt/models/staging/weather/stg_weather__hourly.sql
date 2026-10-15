@@ -11,7 +11,7 @@ flattened as (
         r.file_name,
         r.loaded_at,
         case
-        when r.file_name ilike '%%manila%' then 'Manila'
+        when r.file_name ilike '%manila%' then 'Manila'
         when r.file_name ilike '%mabalacat%' then 'Mabalacat'
         end AS location_name,
         r.raw_data:latitude::FLOAT AS latitude,
