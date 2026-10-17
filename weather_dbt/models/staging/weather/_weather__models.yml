@@ -3,3 +3,13 @@ version: 2
 models:
   - name: stg_weather__hourly
     description: "One row per location per hour per load. Flattens the hourly JSON arrays from weather_raw and casts data types. No dedup."
+    columns:
+      - name: location_name
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Mabalacat', 'Manila']
+      - name: observed_at
+        data_tests:
+          - not_null

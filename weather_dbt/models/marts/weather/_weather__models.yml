@@ -22,8 +22,6 @@ models:
       - name: precipitation_mm
         data_tests:
           - not_null
-  - name: weather_hourly_history
-    description: "One row per location per hour per load, all loads kept. Use to compare how the forecast changed over time."
   - name: dim_location
     description: "One row per location. Name, province, and region from the locations seed, plus coordinates from the weather data."
     columns:
@@ -55,3 +53,15 @@ models:
               arguments:
                 to: ref('dim_date')
                 field: date_day      
+  - name: weather_hourly_history
+    description: "One row per location per hour per load, all loads kept. Use to compare how the forecast changed over time."
+    columns:
+      - name: file_name
+        data_tests:
+          - not_null
+      - name: observed_at
+        data_tests:
+          - not_null
+      - name: temperature_c
+        data_tests:
+          - not_null
