@@ -65,3 +65,20 @@ models:
       - name: temperature_c
         data_tests:
           - not_null
+  - name: fct_weather_daily
+    description: "One row per location per day, aggregated from fct_weather_hourly. rain_hours = hours with precipitation_mm > 0; hot_hours = hours with temperature_c >= 32."
+    columns:
+      - name: location_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_location')
+                field: location_id
+      - name: date_day
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_day        
