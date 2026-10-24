@@ -1,8 +1,13 @@
-with history AS(
+{{ config(materialized='incremental') }}
 
-    select * 
-    from {{ ref('stg_weather__hourly') }}
+with history as (
+
+    select * from {{ ref('stg_weather__hourly') }}
+
 )
 
-select *
-from history
+select * from history
+
+{% if is_incremental() %}
+where loaded_at > (select max(loaded_at) from {{ this }})
+{% endif %}
