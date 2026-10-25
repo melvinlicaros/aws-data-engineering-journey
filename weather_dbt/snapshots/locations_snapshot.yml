@@ -1,0 +1,7 @@
+snapshots:
+  - name: locations_snapshot
+    relation: ref('locations')
+    config:
+      unique_key: location_id
+      strategy: check
+      check_cols: all
