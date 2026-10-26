@@ -1,0 +1,25 @@
+name: Weather Pipeline
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install libraries
+        run: pip install -r requirements.txt
+
+      - name: Check setup
+        run: |
+          python --version
+          dbt --version
