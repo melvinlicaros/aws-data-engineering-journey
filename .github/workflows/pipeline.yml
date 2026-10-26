@@ -9,10 +9,10 @@ jobs:
 
     steps:
       - name: Get the code
-        uses: actions/checkout@v4
+        uses: palitan ang v4 ng v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: palitan ang v5 ng v6
         with:
           python-version: "3.14"
 
