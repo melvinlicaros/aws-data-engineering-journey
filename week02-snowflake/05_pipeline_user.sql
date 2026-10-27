@@ -1,0 +1,1 @@
+    RSA_PUBLIC_KEY = '<paste public key here>';
