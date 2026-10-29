@@ -31,10 +31,10 @@ jobs:
       - name: Fetch weather data
         run: |
           mkdir -p data
-          python fetch_weather.py
+          python week01-python/fetch_weather.py
 
       - name: Load to Snowflake
-        run: python load_weather.py
+        run: python week02-snowflake/load_weather.py
 
       - name: dbt build (prod)
         working-directory: weather_dbt
