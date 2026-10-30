@@ -1,0 +1,34 @@
+name: dbt CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  dbt-ci:
+    runs-on: ubuntu-latest
+    env:
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      SNOWFLAKE_PRIVATE_KEY_PATH: ${{ github.workspace }}/rsa_key.p8
+
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Install libraries
+        run: pip install -r requirements.txt
+
+      - name: Write private key to file
+        run: |
+          echo "${{ secrets.SNOWFLAKE_PRIVATE_KEY }}" > rsa_key.p8
+          chmod 600 rsa_key.p8
+
+      - name: dbt build (CI)
+        working-directory: weather_dbt
+        run: dbt build --profiles-dir ci_profiles --target ci
