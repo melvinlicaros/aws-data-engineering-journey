@@ -22,6 +22,9 @@ grant select, insert on table WEATHER_DB.RAW.WEATHER_RAW to role PIPELINE_ROLE;
 -- 4. Prod schema for dbt (role owns it, so dbt can create/replace tables)
 create schema if not exists WEATHER_DB.DBT_PROD;
 grant ownership on schema WEATHER_DB.DBT_PROD to role PIPELINE_ROLE;
+-- 4b. CI schema for pull request checks (sandbox, never prod)
+create schema if not exists WEATHER_DB.DBT_CI;
+grant ownership on schema WEATHER_DB.DBT_CI to role PIPELINE_ROLE;
 
 -- 5. Service user (key-pair only, no password)
 create user if not exists PIPELINE_USER
