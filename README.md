@@ -76,6 +76,58 @@ Real issues I hit and fixed while building this:
 - **Relative paths in CI.** Scripts must be referenced from the repo root, and the key path uses `${{ github.workspace }}` because dbt runs inside a subfolder.
 - **Grain matters.** The history model's uniqueness test failed until `loaded_at` was added to the grain, because the same file can be reloaded.
 
+
+## Project 2: Fabric Medallion Pipeline
+
+A second pipeline built entirely inside Microsoft Fabric, with no Snowflake dependency. A Fabric Data Pipeline ingests the same Open-Meteo API, moves the data through Bronze, Silver and Gold lakehouses, and refreshes a Direct Lake semantic model so the Power BI report is always current.
+
+![Fabric dashboard](docs/images/fabric-dashboard.png)
+
+### Architecture
+
+```mermaid
+flowchart LR
+    A[Open-Meteo API] -->|Copy data x2, parallel| B[(lh_bronze<br/>raw JSON)]
+    B -->|Notebook: flatten| C[(lh_silver<br/>hourly Delta)]
+    C -->|Notebook: aggregate| D[(lh_gold<br/>daily fact)]
+    D -->|Semantic model refresh| E[sm_weather_api]
+    E --> F[rpt_weather_api]
+```
+
+![Pipeline run, Gantt view](docs/images/fabric-pipeline-gantt.png)
+
+### How It Works
+
+1. **Bronze:** two Copy data activities (HTTP source, Binary format) land the raw API JSON for Mabalacat and Manila in parallel, exactly as received.
+2. **Silver:** a PySpark notebook runs only after both copies succeed. It flattens the nested hourly arrays with `posexplode`, casts types, derives `location_name` from the file name, and adds a `loaded_at` timestamp. Writes are idempotent (`overwrite`).
+3. **Gold:** a second notebook aggregates hourly data into a daily fact table (avg, max, min temperature, rainfall, rain hours, hot hours), rounding aggregates to remove floating point artifacts.
+4. **Serve:** the pipeline refreshes the Direct Lake semantic model on success, so the report never shows partial data.
+
+### Semantic Model
+
+![Semantic model](docs/images/fabric-semantic-model.png)
+
+- Star schema: one daily fact table with conformed `dim_date` and `dim_location` dimensions, many-to-one, single direction
+- `dim_date` marked as the date table
+- Raw fact columns hidden; report builders only see explicit measures
+- 11 DAX measures, including:
+  - `% Rainy Days` with `DIVIDE` and `VAR ... RETURN`
+  - `Avg Temp Range` built on a calculated column
+  - `Avg Temp Prev Day` and `Temp Change vs Prev Day` with `DATEADD`
+  - `Avg Temp 3-Day Rolling` with `DATESINPERIOD`
+  - `Hottest Day Rank` with `RANKX(ALL(...))`
+
+### Fabric Lessons Learned
+
+- **A stray character broke the API call.** A copied URL picked up extra text, so the source returned HTTP 400. Reading the error code pointed straight to the request, not the connection.
+- **Delta protects its schema.** Adding `loaded_at` failed with a schema mismatch until I used `overwriteSchema`, which fits a full overwrite better than `mergeSchema`.
+- **Small capacities can queue jobs.** A notebook sat "in progress" for 9 minutes because my interactive session held the F2 Spark resources. Stopping the session freed it immediately.
+- **Don't trust auto-detected relationships.** Fabric guessed cardinality from row counts and reversed the date relationship twice. The "one" side is wherever the key is unique, which is the dimension.
+- **Hide raw columns once measures exist.** A card dragged from a raw column used an implicit SUM and showed 222.9°C. Hiding the columns makes that mistake impossible.
+- **BLANK acts like zero in DAX arithmetic.** Day-over-day change showed a fake -26.9°C drop on a date with no data, so both sides of the comparison need an `ISBLANK` guard.
+- **`RANKX` needs `ALL`.** With `VALUES`, each row only sees itself, so every day ranked first.
+
+
 ## Repository Structure
 
 ```
@@ -88,7 +140,7 @@ docs/images/         screenshots
 
 ## Next Steps
 
-- Automate the Fabric layer with a Fabric Data Pipeline (run notebook, then refresh the semantic model)
+- ~~Automate the Fabric layer with a Fabric Data Pipeline~~ Done, see Project 2
 - Add `cache: pip` to cut install time in GitHub Actions
 - Add an `is_forecast` flag, since the API mixes forecast with observed data
 
