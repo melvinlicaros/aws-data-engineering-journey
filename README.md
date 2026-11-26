@@ -127,7 +127,61 @@ flowchart LR
 - **BLANK acts like zero in DAX arithmetic.** Day-over-day change showed a fake -26.9°C drop on a date with no data, so both sides of the comparison need an `ISBLANK` guard.
 - **`RANKX` needs `ALL`.** With `VALUES`, each row only sees itself, so every day ranked first.
 
+## Project 3: Snowflake to Fabric Medallion Pipeline
 
+A cross-platform pipeline that picks up where Project 1 ends. Every morning, GitHub Actions loads new weather data into Snowflake and runs dbt. Forty minutes later, a scheduled Fabric pipeline pulls that data into a Bronze, Silver and Gold lakehouse, models it as a star schema, and refreshes the Power BI report. No one has to press a button.
+
+![Medallion report](docs/images/medallion-report.png)
+
+### Architecture
+
+```mermaid
+flowchart LR
+    subgraph gh["GitHub Actions, 6:17 AM"]
+        A[Open-Meteo API] --> B[(Snowflake DBT_PROD)]
+    end
+    subgraph fab["Fabric Pipeline, 7:00 AM"]
+        B -->|key-pair, read-only user| C[(Bronze<br/>full copy + ingested_at)]
+        C -->|row_number dedup| D[(Silver<br/>1 row per city per hour)]
+        D --> E[(Gold<br/>dim_location + fct_weather_daily)]
+        E -->|refresh on success| F[sm_medallion_practice]
+        F --> G[rpt_medallion_practice]
+    end
+```
+
+### How It Works
+
+1. **Bronze:** a PySpark notebook connects to Snowflake with a service user (`FABRIC_USER`, read-only `ANALYST` role, key-pair auth) and copies `WEATHER_HOURLY_HISTORY` as is. The only addition is an `ingested_at` timestamp. Writes use `overwrite` + `overwriteSchema`, so reruns are idempotent.
+2. **Silver:** column names are standardized to lowercase. The same hour appears in several daily files (the API returns past and forecast days every run), so duplicates are removed with `row_number()` over `location_name, observed_at`, keeping the most recently loaded version. `dropDuplicates` was not used because it keeps an arbitrary copy.
+3. **Gold:** a location dimension with a surrogate key, and a daily fact table at the grain of one city per day (max, min and avg temperature, rainfall, hot hours, and an `is_forecast` flag).
+4. **Serve:** a Fabric pipeline runs the notebook, then refreshes the semantic model only on success. It is scheduled daily at 7:00 AM Manila time, after the upstream GitHub Actions run, with failure email alerts.
+
+### Data Quality and Reconciliation
+
+Every layer is checked before it is written. Results from the first full run:
+
+| Check | Result |
+|---|---|
+| Snowflake rows = Bronze rows | 3,360 = 3,360 |
+| Unique city + hour in Bronze = Silver rows | 1,008 = 1,008 |
+| Duplicate keys in Silver | 0 |
+| Null temperatures | 0 |
+| Fact rows with location not found in dim | 0 |
+| Days with fewer than 24 hours | 0 |
+| Sum of hours in Gold = Silver rows | 1,008 = 1,008 |
+| DAX `Actual Days + Forecast Days` = fact rows | 32 + 10 = 42 |
+
+### Lessons Learned
+
+- **"Succeeded" is not the same as "correct."** The first scheduled run passed, but a verification query showed today's date flagged as forecast. `current_date()` runs in UTC on Fabric, and 7:00 AM in Manila is 11:00 PM UTC the day before. Fixed by converting to `Asia/Manila` before comparing dates. The bug only appears in runs before 8:00 AM, so afternoon testing would never catch it.
+- **Spark column names are case-insensitive.** Adding `loaded_at` silently overwrote Snowflake's own `LOADED_AT` column instead of creating a new one, losing the audit trail. Renamed mine to `ingested_at`.
+- **Check the warehouse, not just the connection.** The Snowflake connection succeeded, but queries failed with "no active warehouse". The configured warehouse name was wrong, and Snowflake ignores it silently. `SELECT CURRENT_WAREHOUSE()` returning `None` and `SHOW WAREHOUSES` found it in seconds.
+- **Deleting a table in the UI does not always clear Spark's catalog.** A rewrite failed with a Delta schema mismatch on a table I had already deleted. `SHOW TABLES` confirmed Spark still had it. `overwriteSchema` is now the default for every full refresh.
+- **Average of averages is only right by luck.** It matches the true average here because every day has exactly 24 hours. Sums and counts are safe to aggregate; averages and percentages are not.
+- **A good-looking chart can still be wrong.** The "Avg Max Temp" line sat at 28 to 30°C, but the fact table's max temperatures were 32 to 34°C. The measure was pointing at `avg_temp_c`. Checking one value against the source caught it.
+- **`%pip install` is off in pipeline runs by default.** The notebook needed the `_inlineInstallationEnabled` base parameter to install the Snowflake connector when triggered by the pipeline.
+
+  
 ## Repository Structure
 
 ```
@@ -142,7 +196,7 @@ docs/images/         screenshots
 
 - ~~Automate the Fabric layer with a Fabric Data Pipeline~~ Done, see Project 2
 - Add `cache: pip` to cut install time in GitHub Actions
-- Add an `is_forecast` flag, since the API mixes forecast with observed data
+- ~~Add an `is_forecast` flag, since the API mixes forecast with observed data~~ Done, see Project 3
 
 ## Author
 
